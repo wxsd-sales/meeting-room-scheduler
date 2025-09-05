@@ -37,10 +37,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wxsd-sales/meeting-room-with-instant-connect.git"
+    "url": "git+https://github.com/wxsd-sales/meeting-room-scheduler.git"
   },
   "bugs": {
-    "url": "https://github.com/wxsd-sales/meeting-room-with-instant-connect/issues"
+    "url": "https://github.com/wxsd-sales/meeting-room-scheduler/issues"
   },
-  "homepage": "https://github.com/wxsd-sales/meeting-room-with-instant-connect#readme"
+  "homepage": "https://github.com/wxsd-sales/meeting-room-scheduler#readme"
 }
