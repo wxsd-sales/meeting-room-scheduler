@@ -1,6 +1,8 @@
 # Meeting Room Scheduler
 This is a custom utility for scheduling a Webex meeting that will allow a guest user to join remotely from a browser, and a host to join from a RoomOS device.
 
+## Demo
+[![Vidcast Overview](https://github.com/user-attachments/assets/40bc76eb-636c-4830-be7e-4a6da7019eaf)](https://app.vidcast.io/share/3534d424-2e94-4799-b076-be9338a7f173)
 
 ## Installation
 
