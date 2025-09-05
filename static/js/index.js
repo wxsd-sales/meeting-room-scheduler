@@ -1,13 +1,3 @@
-/*
-function updateSummary(response){
-  var today = new Date();
-  var time = ('0' + today.getHours()).substr(-2) + ":" + ('0' + today.getMinutes()).substr(-2) + ":" + ('0' + today.getSeconds()).substr(-2);
-  text = time + " - " + response;
-  var summary_area = document.getElementById("summary");
-  summary_area.value = text + "\n" + summary_area.value;
-  summary_area.scrollTop = 0;
-}*/
-
 var myHostUrl;
 var myGuestUrl;
 var meetingStartTime = null;
@@ -29,57 +19,58 @@ function makeDefault(){
 }
 
 
-
-function startInstantConnectMeeting(){
+async function scheduleInstantMeeting(){
+  $('#host-code').text("");
+  $('#guest-code').text("");
   meetingStartTime = $('.my-calendar').val();
   meetingDuration = parseInt($('#duration').val())
-  let options = {command: "start_meeting", 
-                 environment: environment,
-                 duration: meetingDuration,
-                 start_time: meetingStartTime,
+  let options = {duration: meetingDuration,
+                 startTime: meetingStartTime,
                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
   console.log(options);
-  $.post('/command', JSON.stringify(options)).done(function (response) {
-    console.log(response);
-    if(response.data){
-      console.log(response.data["host_url"]);
-      console.log(response.data["guest_url"]);
-      myHostUrl = response.data["host_url"];
-      myGuestUrl = response.data["guest_url"];
-      // if(jresp.data["delay"]){
-      //   $('#main-notification').text('Future Instant Connect Meeting created. An Email with the details has been sent to you.');
-      //   $('#copy-join-buttons').hide();
-      //   $('#meeting-buttons').css('visibility', 'visible');
-      // } else {
-      $('#main-notification').text('Created Instant Connect Meeting successfully.');
-      $('#host-join-buttons').show();
-      $('#guest-join-buttons').show();
-      $('#meeting-buttons').css('visibility', 'visible');
-      //}
+  let response = await fetch('/schedule', {
+    method: 'POST', 
+    headers: {
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify(options)
+  })
+  let data = await response.json()
+  console.log(data);
+  if(data && !data.error){
+    console.log(data["hostUrl"]);
+    console.log(data["guestUrl"]);
+    myHostUrl = data["hostUrl"];
+    myGuestUrl = data["guestUrl"];
+    $('#host-code').text(data["hostCode"]);
+    $('#guest-code').text(data["guestCode"]);
+    $('#main-notification').text('Created Meeting successfully.');
+    $('#host-join-buttons').show();
+    $('#guest-join-buttons').show();
+    $('#meeting-buttons').css('visibility', 'visible');
+  } else {
+    makeDanger();
+    if(data && data.error){
+      $('#main-notification').text(data.error);
     } else {
-      console.log('startInstantConnectMeeting - failed');
-      makeDanger();
-      $('#main-notification').text('Failed to create Instant Connect Meeting.');
+      $('#main-notification').text('Failed to create Meeting.');
     }
-    $('#start').removeClass('is-loading');
-  });
+  }
+  $('#create').removeClass('is-loading');
 }
 
 
 $('document').ready(function() {
 
-  $('#webex-avatar').attr('src', webexAvatar);
-
-  $("#start").on('click', function(e) {
+  $("#create").on('click', async function(e) {
     $('#meeting-buttons').css('visibility', 'hidden');
-    $('#start').addClass('is-loading');
+    $('#create').addClass('is-loading');
     makeDefault();
-    $('#main-notification').text('Creating Instant Connect Meeting.');
+    $('#main-notification').text('Creating Meeting.');
     $('#main-notification').css('visibility', 'visible');
-    startInstantConnectMeeting();
+    await scheduleInstantMeeting();
   });
 
-  
   $("#host-copy").on('click', function(e) {
     navigator.clipboard.writeText(myHostUrl);
     makeDefault();
@@ -98,46 +89,6 @@ $('document').ready(function() {
 
   $('#guest-join').on('click', function(e){
     window.open(myGuestUrl, "_blank");
-  })
-
-  $('#email').on('click', function(e){
-    let emailInput = $('#email-input').val().trim();
-    if(emailInput){
-      $('#email').addClass('is-loading');
-      let options = {command: "email", 
-                    url: myGuestUrl, 
-                    email: emailInput,
-                    duration: meetingDuration,
-                    start_time: meetingStartTime,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone}
-      $.post('/command', JSON.stringify(options)).done(function (response) {
-        console.log(response);
-        let jresp = JSON.parse(response);
-        if(jresp.data){
-          console.log(jresp.data);
-          makePrimary();
-          $('#main-notification').text('Sent Guest URL emails successfully.');
-        } else {
-          console.log('POST /command: email - failed');
-          makeDanger();
-          let errText = 'Failed to send Guest URL emails.<br/>';
-          errText += jresp.reason;
-          $('#main-notification').html(errText);
-        }
-        $('#email').removeClass('is-loading');
-      });
-    } else {
-      makeDanger();
-      $('#main-notification').text('Guest Email input cannot be empty.');
-    }
-  })
-
-  $('#logout').on('click', function(e){
-    let redirectTo = "/logout?";
-    if(window.location.pathname != "/"){
-      redirectTo += `returnTo=${window.location.pathname.substring(1)}`;
-    }
-    window.location = redirectTo;
   })
 
 })
