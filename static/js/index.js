@@ -26,9 +26,14 @@ async function scheduleInstantMeeting(){
   meetingDuration = parseInt($('#duration').val())
   let options = {duration: meetingDuration,
                  startTime: meetingStartTime,
-                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                 deviceId: $('#locations').val()}
   console.log(options);
-  let response = await fetch('/schedule', {
+  let path = 'schedule';
+  if(instant){
+    path = 'instant';
+  }
+  let response = await fetch(`/${path}`, {
     method: 'POST', 
     headers: {
       "Content-Type":"application/json"
@@ -60,7 +65,22 @@ async function scheduleInstantMeeting(){
 }
 
 
-$('document').ready(function() {
+$('document').ready(async function() {
+  let response = await fetch(`/devices`, {
+    method: 'GET', 
+    headers: {
+      "Content-Type":"application/json"
+    },
+  })
+  const devices = await response.json()
+  console.log(devices);
+  if(devices?.items?.length > 0){
+    for(let d of devices.items){
+      $('#locations').append(
+        $(`<option value="${d.id}">${d.displayName}</option>`)
+      )
+    }
+  }
 
   $("#create").on('click', async function(e) {
     $('#meeting-buttons').css('visibility', 'hidden');

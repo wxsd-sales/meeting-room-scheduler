@@ -3,6 +3,7 @@ import express from 'express';
 
 import { config } from '../lib/config.js';
 import { insertBooking } from '../lib/database.js';
+import { createMeeting } from '../lib/instant-connect.js';
 
 import moment from 'moment-timezone';
 
@@ -43,21 +44,77 @@ class DateHandler {
         return [startDate.toISOString().replace('T', ' ').replace('.000Z', '+00:00'), 
                 endDate.toISOString().replace('T', ' ').replace('.000Z', '+00:00')];
     }
+
+    getTimestamps(startTime, duration, timezone){
+        const startDate = moment.tz(startTime, 'MM/DD/YYYY HH:mm', timezone).unix();
+        const endDate = startDate + (duration*60);
+        return [startDate, endDate];
+    }
 }
 
+
+async function saveData(body, guestCode, hostCode, startDate, endDate, meetingPlatform){
+  let id = body.id;
+  if(!id){
+    id = body.meetingId;
+  }
+  if(!meetingPlatform){
+    meetingPlatform = "webex";
+  }
+
+  let saveData = { 
+      "meetingId": id, "meetingNumber": body.meetingNumber,
+      "start": new Date(startDate), "end": new Date(endDate),
+      "webLink": body.webLink, "sipAddress":body.sipAddress,
+      "password": body.password, "platform": meetingPlatform,
+      "guestCode": guestCode, "hostCode": hostCode
+  }
+
+  if(meetingPlatform === "instant"){
+    saveData.hostUrl = body.hostUrl;
+    saveData.guestUrl = body.guestUrl;
+  }
+
+  console.log('saveData', saveData);
+  await insertBooking(saveData);
+}
+
+
+async function bookDevice(deviceId, duration, sipAddress, startTime, title){
+  let body = {
+    "deviceId": deviceId,
+    "arguments": {
+      "Duration": duration,
+      "MeetingPlatform": "Webex",
+      "Number": sipAddress,
+      // "OrganizerEmail": "user@email.com",
+      // "OrganizerName": "First Last",
+      "Protocol": "SIP",
+      "StartTime": new Date(startTime).toISOString(),// Format: "2025-09-26T18:55:00Z"
+      "Title": title
+    }
+  }
+  console.log("Booking Device:");
+  console.log(body);
+  let resp = await fetch('https://webexapis.com/v1/xapi/command/Bookings.Book',{
+      method: "POST",
+      headers:{
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.botToken}`
+      },
+      body: JSON.stringify(body)
+  });
+  console.log('bookDevice response status:', resp.status);
+  let jresp = await resp.json();
+  return jresp;
+}
 
 
 router.post('/schedule', async (req, res) => {
   console.log('/schedule req.body:', req.body);
   try {
     let returnData;
-    
-    const startTime = req.body['startTime'];
-    const duration = req.body['duration'];
-    const timezone = req.body['timezone'];
-    
-    const dateHandler = new DateHandler();
-    const [start, end] = dateHandler.getDates(startTime, duration, timezone);
+    const [start, end] = new DateHandler().getDates(req.body['startTime'], req.body['duration'], req.body['timezone']);
 
     console.log('Final results:');
     console.log('Start:', start);
@@ -86,24 +143,16 @@ router.post('/schedule', async (req, res) => {
     console.log("Meeting Created:");
     console.log(jresp);
 
-    let saveData = { 
-      "meetingId": jresp.id, "meetingNumber": jresp.meetingNumber,
-      "start": new Date(jresp.start), "end": new Date(jresp.end),
-      "webLink": jresp.webLink, "sipAddress":jresp.sipAddress,
-      "password": jresp.password,
-      "guestCode": guestCode, "hostCode": hostCode 
+    if(["", "none", null, undefined].indexOf(req.body['deviceId']) < 0){
+      await bookDevice(req.body['deviceId'], req.body['duration'], jresp.sipAddress, jresp.start, jresp.title);
     }
 
-    console.log('saveData', saveData);
-    await insertBooking(saveData);
+    await saveData(jresp, guestCode, hostCode, jresp.start, jresp.end, "webex");
 
     returnData = {
       "hostUrl": `${config.baseUri}/meeting/${hostCode}`, "guestUrl": `${config.baseUri}/meeting/${guestCode}`,
       "hostCode": hostCode, "guestCode": guestCode
     }
-
-    //TODO:
-    //Stretch ...Maybe also store the Host pin depending on if we manage to figure out Instant Connect
 
     if (!returnData) {
       return res.status(400).json({ error: "No data found" });
@@ -115,5 +164,55 @@ router.post('/schedule', async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
+
+router.post('/instant', async (req, res) => {
+  console.log('/instant req.body:', req.body);
+  try {
+    let returnData;
+    const [start, end] = new DateHandler().getTimestamps(req.body['startTime'], req.body['duration'], req.body['timezone']);
+
+    console.log('Final results:');
+    console.log('Start:', start);
+    console.log('End:', end);
+
+    // let now = new Date();
+    // now = parseInt(now.getTime()/1000);
+    // let startTimestamp = now;
+    // let endTimestamp = now + 3600;
+
+    // console.log('Old Start:', startTimestamp);
+    // console.log('Old End:', endTimestamp);
+
+    let result = await createMeeting(start,end);
+    const startDate = result.startTimestamp * 1000;
+    const endDate = result.endTimestamp * 1000;
+    if(["", "none", null, undefined].indexOf(req.body['deviceId']) < 0){
+      await bookDevice(req.body['deviceId'], req.body['duration'], result.sipAddress, startDate, "Instant Meeting");
+    }
+
+    const guestCode = generateCode(); // e.g., "B4M8N1"
+    const hostCode = generateCode();
+
+    await saveData(result, guestCode, hostCode, startDate, endDate, "instant");
+
+    returnData = {
+      "hostUrl": result.hostUrl, "guestUrl": result.guestUrl,
+      "hostCode": hostCode, "guestCode": guestCode
+    }
+    
+
+    if (!returnData) {
+      return res.status(400).json({ error: "No data found" });
+    }
+    
+    res.json(returnData);
+  } catch (error) {
+    console.error('Database query error:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 export default router;

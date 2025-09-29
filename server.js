@@ -30,15 +30,24 @@ app.use(express.json());
 app.use('/', mainRoutes);
 app.use('/', scheduleRoutes);
 
+//URL Parameters:
+//instant=true (uses IC meeting instead of Webex backend)
 
-//TODOS
-//2. Build a macro for the g2g device behind you taht prompts for the host code.
+//Instant Connect:
+//1. 5 minutes before you can join (and after - I don't belive this is configurable).
+//2. Remote links lock down when hosts and users can join (as well as devices for that matter).
+//3. I have to make 2 calls to mtg-broker (one now to get sip address, and one with actual start and end times).
 
-//Stretch goal - save the meeting as a booking on the device?  
-// This may depend on whether we get IC to work with a host pin or can PW protect the Webex meeting.
+//Webex:
+// 1. You can join the meeting any time before is starts (and usually after too).
+// 2. You need a middleware URL/Checkin for remote host link, because /join links max expire time is 60 minutes from when they're created.
+// 3. You can get SIP address immediately for all future meetings, so don't need multiple API requests or middleware, nor a check in URL from the device.
+// 4. You can use the weblink for guest joins.
+// 5. Host join is more complicated - requires /join API call, but link max expire time is 60 minutes from request time.
 
-//Last. delete commented code.
-//Last. check github repo is correct and package.json is accurate
+//For Both:
+//1. Joining the meeting number as the device joins me as the host if device is in the org (and the feature is allowed in CH).
+//2. Host needs to admit Guests
 
 
 async function tokenRefresh(){

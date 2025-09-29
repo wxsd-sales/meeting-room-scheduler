@@ -59,6 +59,11 @@
                 <div class="columns is-mobile is-centered">
                     <div class="column is-narrow py-0">
                         <input id="my-calendar" class="my-calendar" type="date" data-close-on-select="true"/>
+                        <div class="select mt-1 is-full-width">
+                            <select id="locations">
+                              <option value="none">--Booking Location--</option>
+                            </select>
+                        </div>
                         <div class="select mt-1">
                             <select id="duration">
                               <option value="15">Duration (minutes)</option>
@@ -129,6 +134,11 @@
   </body>
   <script src="js/jquery-3.4.1.min.js"></script>
   <script type="text/javascript">
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const instant = urlParams.get('instant')?.toLowerCase() == "true";
+    console.log('instant', instant);
 
     let today = new Date();
     let todayDate = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;

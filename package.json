@@ -2,12 +2,10 @@
   "name": "meeting-room-scheduler",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "This is a custom utility for scheduling a Webex meeting that will allow a guest user to join remotely from a browser, and a host to join from a RoomOS device.",
   "main": "server.js",
   "directories": {
-    "lib": "lib",
-    "routes": "routes",
-    "static": "static"
+    "lib": "lib"
   },
   "scripts": {
     "start": "node server.js",
@@ -22,7 +20,7 @@
     "express": "^4.18.2",
     "moment-timezone": "^0.6.0",
     "mongodb": "^5.8.1",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
