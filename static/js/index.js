@@ -76,9 +76,11 @@ $('document').ready(async function() {
   console.log(devices);
   if(devices?.items?.length > 0){
     for(let d of devices.items){
-      $('#locations').append(
-        $(`<option value="${d.id}">${d.displayName}</option>`)
-      )
+      if(d.type === "roomdesk"){
+        $('#locations').append(
+          $(`<option value="${d.id}">${d.displayName}</option>`)
+        )
+      }
     }
   }
 

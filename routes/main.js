@@ -35,6 +35,12 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.post('/', async (req, res) => {
+  console.log('/ body:');
+  console.log(req.body);
+  res.status(405).send('Method not allowed');
+});
+
 
 router.get('/error', async (req, res) => {
   try {
