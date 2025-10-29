@@ -27,14 +27,14 @@ class DateHandler {
         const startDate = moment.tz(startTime, 'MM/DD/YYYY HH:mm', timezone);
         // Convert to UTC
         const startDateUTC = startDate.utc();
-        console.log(`start_date:${startDateUTC.format()}`);
+        console.log(`getStartDate start_date:${startDateUTC.format()}`);
         return startDateUTC;
     }
 
     getEndDate(startDate, duration) {
         // Add duration in minutes to start date
         const endDate = startDate.clone().add(duration, 'minutes');
-        console.log(`end_date:${endDate.format()}`);
+        console.log(`getEndDate end_date:${endDate.format()}`);
         return endDate;
     }
 
@@ -94,7 +94,7 @@ async function bookDevice(deviceId, duration, sipAddress, startTime, title){
       "Title": title
     }
   }
-  console.log("Booking Device:");
+  console.log("bookDevice body:");
   console.log(body);
   let resp = await fetch('https://webexapis.com/v1/xapi/command/Bookings.Book',{
       method: "POST",
@@ -116,9 +116,8 @@ router.post('/schedule', async (req, res) => {
     let returnData;
     const [start, end] = new DateHandler().getDates(req.body['startTime'], req.body['duration'], req.body['timezone']);
 
-    console.log('Final results:');
-    console.log('Start:', start);
-    console.log('End:', end);
+    console.log('/schedule Start:', start);
+    console.log('/schedule End:', end);
 
     const guestCode = generateCode(); // e.g., "B4M8N1"
     const hostCode = generateCode();
@@ -135,12 +134,12 @@ router.post('/schedule', async (req, res) => {
           headers: req.app.get('webexHeaders'),
           body: JSON.stringify(body)
     });
-    console.log('Create Meeting Response Status', resp.status);
+    console.log('/schedule Create Meeting Response Status', resp.status);
     let jresp = await resp.json();
     if(resp.status > 299 && jresp.errors && jresp.errors.length > 0){
       return res.status(resp.status).json({ error: jresp.errors[0].description });
     }
-    console.log("Meeting Created:");
+    console.log("/schedule Meeting Created:");
     console.log(jresp);
 
     if(["", "none", null, undefined].indexOf(req.body['deviceId']) < 0){
@@ -160,7 +159,7 @@ router.post('/schedule', async (req, res) => {
     
     res.json(returnData);
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('/schedule general error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -173,9 +172,8 @@ router.post('/instant', async (req, res) => {
     let returnData;
     const [start, end] = new DateHandler().getTimestamps(req.body['startTime'], req.body['duration'], req.body['timezone']);
 
-    console.log('Final results:');
-    console.log('Start:', start);
-    console.log('End:', end);
+    console.log('/instant Start:', start);
+    console.log('/instant End:', end);
 
     // let now = new Date();
     // now = parseInt(now.getTime()/1000);
@@ -209,7 +207,7 @@ router.post('/instant', async (req, res) => {
     
     res.json(returnData);
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('/instant general error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
