@@ -22,9 +22,19 @@ WEBEX_SA_REFRESH_TOKEN=""
 MONGODB_SRV=""
 MONGODB="meetingRoom"
 MONGODB_COL="bookings"
+
+MTG_BROKER_URL="https://mtg-broker-a.wbx2.com/api/v2"
+INSTANT_CONNECT_AUD="a4d886b0-979f-4e2c-a958-3e8c14605e51"
+BOT_TOKEN=""
 ```
 For information about how to create a Service App Token in webex, please review:  
-https://developer.webex.com/create/docs/service-apps
+https://developer.webex.com/create/docs/service-apps  
+You will populate the Service App's ClientId, Secret and Refresh Token in the corresponding WEBEX_SA environment varaibles.  
+
+For information about how to create a Bot Token in webex, please review:  
+https://developer.webex.com/create/docs/bots  
+
+- f. Note, this demo also works with instant connect. When navigating to your web application, add ```?instant=true``` to the URL, for example: ```https://subdomain.domain.com?instant=true```
 
 
 ### 2.a. Run the webserver as a container (Docker) (recommended)
