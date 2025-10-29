@@ -34,7 +34,8 @@ You will populate the Service App's ClientId, Secret and Refresh Token in the co
 For information about how to create a Bot Token in webex, please review:  
 https://developer.webex.com/create/docs/bots  
 
-- f. Note, this demo also works with instant connect. When navigating to your web application, add ```?instant=true``` to the URL, for example: ```https://subdomain.domain.com?instant=true```
+- f. The Bot you create will need to be added to the workspaces in Control Hub.  You can click the settings icon for the device, inside the workspace, and select Edit API Access, and add the bot as a Full Admin.
+- g. Note, this demo also works with instant connect. When navigating to your web application, add ```?instant=true``` to the URL, for example: ```https://subdomain.domain.com?instant=true```
 
 
 ### 2.a. Run the webserver as a container (Docker) (recommended)
