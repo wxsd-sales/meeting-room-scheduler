@@ -1,6 +1,6 @@
 # Meeting Room Scheduler — Device Macro & Flows
 
-This repository contains the **device-side** and **flow** assets for a Webex Instant Connect meeting-join experience: a RoomOS macro for Cisco room devices and Webex Connect workflow exports for booking and launching meetings by passcode.
+This repository contains the **device-side** and **flow** assets for a Webex Instant Connect meeting-join experience.
 
 ## Demo
 [![Vidcast Overview](https://github.com/user-attachments/assets/38c72119-39be-4fc0-818d-97d807c8d9f3)](https://app.vidcast.io/share/39ba4605-e0cc-4ad1-8e58-2a2c75d51c93)
@@ -64,6 +64,26 @@ These flows are intended to be imported and used in Webex Connect together with 
 3. Configure `BOT_TOKEN` variable in BOTH flows to the value of your bot's access token from Step 1.
 4. Configure `INSTANT_CONNECT_AUD` in `ic_book.workflow` (example value: `a4d886b0-979f-4e2c-a958-3e8c14605e51`)
 
+## Run
+
+### Schedule a Meeting ("Book a Room")
+
+Example POST:  
+`POST "https://hooks.us.webexconnect.io/events/ABCDEFG123"`
+Body:
+```
+{"start":{{startTimestamp}},
+"end":{{endTimestamp}},
+"phoneNumber":"+13215551234",
+"deviceSerial":"{{deviceSerial"}
+```
+The POST url should correspond to the url in your `ic_book.workflow`.
+`startTimestamp` and `endTimestamp` should be the date/time in the number of **seconds** since the epoch (Jan 1, 1970).
+
+
+### Use the device to "Launch" the meeting
+
+With the macro and workflows configured, you should simply be able to walk up to the device, press the Meeting Join button, and enter the corresponding passcode (currently sent as an SMS from the previous step, but can be changed in the workflows).
 
 ## License
 
