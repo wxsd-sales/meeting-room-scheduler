@@ -1,60 +1,56 @@
-# Webex Connect — Device Macro & Flows
+# Meeting Room Scheduler — Device Macro & Flows
 
-This repository contains the **device-side** and **flow** assets for a Webex meeting-join experience: a RoomOS macro for Cisco room devices and Webex Connect workflow exports for booking and launching meetings by code.
+This repository contains the **device-side** and **flow** assets for a Webex meeting-join experience: a RoomOS macro for Cisco room devices and Webex Connect workflow exports for booking and launching meetings by passcode.
+
+## Demo
+[![Vidcast Overview](https://github.com/user-attachments/assets/38c72119-39be-4fc0-818d-97d807c8d9f3)](https://app.vidcast.io/share/39ba4605-e0cc-4ad1-8e58-2a2c75d51c93)
+
 
 ## What’s in this repo
 
-- **`deviceMacro.js`** — A RoomOS (xAPI) macro that runs on a Webex room device. It adds a “Meeting Join” control to the touch UI, lets users enter a meeting code, and joins the meeting by calling your backend and dialing the returned SIP address.
+- **`deviceMacro.js`** — A RoomOS (xAPI) macro that runs on a Webex room device. It adds a “Meeting Join” button to the touch UI, lets users enter a meeting passcode, and joins the meeting by initiating a POST request to the Webex Connect flow's url.  The flow then commands the device to dial in.
 - **`webex-connect-flows/`** — Exported Webex Connect workflows:
   - **`ic_book.workflow`** — Flow for booking a meeting (e.g. Instant Connect booking).
-  - **`ic_booking_launch.workflow`** — Flow for launching or joining a booking (e.g. start/launch an Instant Connect meeting).
+  - **`ic_booking_launch.workflow`** — Flow for joining a meeting (e.g. tell the device to start/launch the Instant Connect meeting associated with the user entered passcode).
 
-These flows are intended to be imported and used in Webex Connect (Control Hub) together with your own backend and scheduling system.
+These flows are intended to be imported and used in Webex Connect together with your own scheduling system.
 
 ## How it works
 
 1. **Backend**  
-   You run a separate scheduling/join service (not in this repo) that:
-   - Issues or maps meeting codes.
-   - Exposes an HTTP endpoint (e.g. `GET /sip/{code}`) that returns JSON with at least:
-     - `sipAddress` — SIP URI to dial.
-     - Optionally `minutesEarly` — how many minutes before start the device is allowed to join (the macro uses 10 minutes).
+   You run a separate scheduling service (not in this repo) that:
+   - Issues or maps meeting codes with locations/times.
 
 2. **Room device (macro)**  
    - On the room device, deploy and run `deviceMacro.js`.
-   - Set `baseUrl` in the macro to the base URL of your backend (e.g. `https://your-server.example.com`).
+   - Set `baseUrl` in the macro to the URL of the `webex-connect-flow/ic_booking_launch.workflow`.
    - The macro enables the device HTTP client (and if needed, Allow Insecure HTTPS for non-HTTPS servers).
-   - It adds a “Meeting Join” panel to the UI. When the user enters a meeting code, the macro calls `{baseUrl}/sip/{code}`, parses the JSON, and:
-     - If `sipAddress` is present and `minutesEarly <= 10`, it dials the SIP address.
-     - Otherwise it shows an error (e.g. “Meeting not found” or “Meeting starts in more than 10 minutes”).
+   - It adds a “Meeting Join” panel to the UI. When the user enters a meeting code, the macro calls `{baseUrl}` which corresponds to your imported `ic_booking_launch.workflow)`
+   - The workflow uses the [xAPI](https://roomos.cisco.com/xapi/Command.Dial/) and a `botToken` to tell the device to [dial](https://roomos.cisco.com/xapi/Command.Dial/) the meeting.
 
 3. **Webex Connect flows**  
-   - Import `ic_book.workflow` and `ic_booking_launch.workflow` into Webex Connect as needed for your org.
-   - Use them to implement or extend the booking and “launch meeting” experiences that align with the same meeting codes and backend your macro uses.
+   - Import `ic_book.workflow` and `ic_booking_launch.workflow` into your Webex Connect tenant.
+   - They should each have a unique url in their first node.
+     - `ic_book.workflow` should be used to "save" meeting bookings for future use.
+     - `ic_booking_launch.workflow` is called by the RoomOS devices for joining the booked meetings.
 
 ## Setup (device macro)
 
-1. Open `deviceMacro.js` and set `baseUrl` to your backend’s base URL (no trailing slash), for example:
+1. Open `deviceMacro.js` and set `baseUrl` to your imported `ic_booking_launch.workflow)`'s url.
    ```javascript
-   const baseUrl = "https://your-scheduler.example.com";
+   const baseUrl = "";
    ```
-2. In the room device’s configuration, ensure the HTTP client is allowed to reach that URL (and enable “Allow Insecure HTTPS” only if you use HTTP or self-signed HTTPS for testing).
-3. Deploy and activate the macro on the device (e.g. via Control Hub or room device macro editor).
-4. Optionally adjust the “minutes early” check (currently 10) or error messages in the macro to match your policy.
+2. In the room device’s configuration, ensure the HTTP client is allowed to reach that URL.
+3. Deploy and activate the macro on the device (e.g. via Control Hub or the device's web UI).
 
 ## Setup (Webex Connect flows)
 
-1. In Webex Control Hub, go to **Webex Connect** (or your org’s flow editor).
-2. Import or create flows using the provided `.workflow` files:
+1. In Webex Control Hub, go to **Contact Center** -> [**Webex Connect**](https://admin.webex.com/wxcc/ccoverview).
+2. Import the flows using the provided `.workflow` files:
    - Use `ic_book.workflow` for the booking flow.
    - Use `ic_booking_launch.workflow` for the launch/join flow.
-3. Configure any variables, triggers, and integrations in those flows to point at your backend and scheduling system so that meeting codes and SIP details stay in sync with what the device macro expects.
+3. Configure any variables, triggers, and integrations in those flows.
 
-## Requirements
-
-- **Room device:** Webex device running RoomOS with xAPI (macro execution) and HTTP client enabled.
-- **Backend:** A service that implements the `/sip/{code}` contract (or equivalent) and returns `sipAddress` and optional `minutesEarly`.
-- **Webex Connect:** Access to import and run the provided workflows in your organization.
 
 ## License
 
