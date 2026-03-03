@@ -1,62 +1,61 @@
-# Meeting Room Scheduler
-This is a custom utility for scheduling a Webex meeting that will allow a guest user to join remotely from a browser, and a host to join from a RoomOS device.
+# Webex Connect — Device Macro & Flows
 
-## Demo
-[![Vidcast Overview](https://github.com/user-attachments/assets/40bc76eb-636c-4830-be7e-4a6da7019eaf)](https://app.vidcast.io/share/3534d424-2e94-4799-b076-be9338a7f173)
+This repository contains the **device-side** and **flow** assets for a Webex meeting-join experience: a RoomOS macro for Cisco room devices and Webex Connect workflow exports for booking and launching meetings by code.
 
-## Installation
+## What’s in this repo
 
-###  1. Set up the .env file
-- a. Inside this project's root folder, rename the file ```.env.example``` to ```.env```
-- b. In a text editor, open the ```.env```
-- c. Choose a ```MY_APP_PORT``` or use the default port if you are not sure what to use.
-- d. Paste your base url for your server between the double quotes of ```BASE_URI=""```. If using an IP address, then this should include the port.  Examples:  
-    - ```BASE_URI="https://subdomain.domain.com"```
-    - ```BASE_URI="http://192.168.1.101:5000"```
-- e. The current solution will also require values for the following variables, which are also listed in the ```.env.example```  
-```
-WEBEX_SA_CLIENT_ID=""
-WEBEX_SA_CLIENT_SECRET=""
-WEBEX_SA_REFRESH_TOKEN=""
+- **`deviceMacro.js`** — A RoomOS (xAPI) macro that runs on a Webex room device. It adds a “Meeting Join” control to the touch UI, lets users enter a meeting code, and joins the meeting by calling your backend and dialing the returned SIP address.
+- **`webex-connect-flows/`** — Exported Webex Connect workflows:
+  - **`ic_book.workflow`** — Flow for booking a meeting (e.g. Instant Connect booking).
+  - **`ic_booking_launch.workflow`** — Flow for launching or joining a booking (e.g. start/launch an Instant Connect meeting).
 
-MONGODB_SRV=""
-MONGODB="meetingRoom"
-MONGODB_COL="bookings"
+These flows are intended to be imported and used in Webex Connect (Control Hub) together with your own backend and scheduling system.
 
-MTG_BROKER_URL="https://mtg-broker-a.wbx2.com/api/v2"
-INSTANT_CONNECT_AUD="a4d886b0-979f-4e2c-a958-3e8c14605e51"
-BOT_TOKEN=""
-```
-For information about how to create a Service App Token in webex, please review:  
-https://developer.webex.com/create/docs/service-apps  
-You will populate the Service App's ClientId, Secret and Refresh Token in the corresponding WEBEX_SA environment varaibles.  
+## How it works
 
-For information about how to create a Bot Token in webex, please review:  
-https://developer.webex.com/create/docs/bots  
+1. **Backend**  
+   You run a separate scheduling/join service (not in this repo) that:
+   - Issues or maps meeting codes.
+   - Exposes an HTTP endpoint (e.g. `GET /sip/{code}`) that returns JSON with at least:
+     - `sipAddress` — SIP URI to dial.
+     - Optionally `minutesEarly` — how many minutes before start the device is allowed to join (the macro uses 10 minutes).
 
-- f. The Bot you create will need to be added to the workspaces in Control Hub.  You can click the settings icon for the device, inside the workspace, and select Edit API Access, and add the bot as a Full Admin.
-- g. Note, this demo also works with instant connect. When navigating to your web application, add ```?instant=true``` to the URL, for example: ```https://subdomain.domain.com?instant=true```
+2. **Room device (macro)**  
+   - On the room device, deploy and run `deviceMacro.js`.
+   - Set `baseUrl` in the macro to the base URL of your backend (e.g. `https://your-server.example.com`).
+   - The macro enables the device HTTP client (and if needed, Allow Insecure HTTPS for non-HTTPS servers).
+   - It adds a “Meeting Join” panel to the UI. When the user enters a meeting code, the macro calls `{baseUrl}/sip/{code}`, parses the JSON, and:
+     - If `sipAddress` is present and `minutesEarly <= 10`, it dials the SIP address.
+     - Otherwise it shows an error (e.g. “Meeting not found” or “Meeting starts in more than 10 minutes”).
 
+3. **Webex Connect flows**  
+   - Import `ic_book.workflow` and `ic_booking_launch.workflow` into Webex Connect as needed for your org.
+   - Use them to implement or extend the booking and “launch meeting” experiences that align with the same meeting codes and backend your macro uses.
 
-### 2.a. Run the webserver as a container (Docker) (recommended)
+## Setup (device macro)
 
-- If you prefer to run this through ```npm```, skip this step and proceed to 2.b.
-- Otherwise, run the following commands from the terminal inside your project's root directory:
-- `docker build -t meeting-room-scheduler .`
-- `docker run -p 5000:5000 -i -t meeting-room-scheduler`
-  - replace `5000` in both places with the ```MY_APP_PORT``` used in your `.env` file.  
+1. Open `deviceMacro.js` and set `baseUrl` to your backend’s base URL (no trailing slash), for example:
+   ```javascript
+   const baseUrl = "https://your-scheduler.example.com";
+   ```
+2. In the room device’s configuration, ensure the HTTP client is allowed to reach that URL (and enable “Allow Insecure HTTPS” only if you use HTTP or self-signed HTTPS for testing).
+3. Deploy and activate the macro on the device (e.g. via Control Hub or room device macro editor).
+4. Optionally adjust the “minutes early” check (currently 10) or error messages in the macro to match your policy.
 
-### 2.b. Run the webserver (npm)
-_Node.js version >= 21.5 must be installed on the system in order to run this through npm._
+## Setup (Webex Connect flows)
 
-- It is recommended that you run this as a container (step 2.a.).
-- If you do not wish to run the webserver as a container (Docker), proceed with this step:
-- Inside this project on your terminal type: `npm install`
-- Then inside this project on your terminal type: `npm run build`
-- Then inside this project on your terminal type: `npm run dev`
-- This should run the app on your ```MY_APP_PORT``` (from .env file)
+1. In Webex Control Hub, go to **Webex Connect** (or your org’s flow editor).
+2. Import or create flows using the provided `.workflow` files:
+   - Use `ic_book.workflow` for the booking flow.
+   - Use `ic_booking_launch.workflow` for the launch/join flow.
+3. Configure any variables, triggers, and integrations in those flows to point at your backend and scheduling system so that meeting codes and SIP details stay in sync with what the device macro expects.
 
-  
+## Requirements
+
+- **Room device:** Webex device running RoomOS with xAPI (macro execution) and HTTP client enabled.
+- **Backend:** A service that implements the `/sip/{code}` contract (or equivalent) and returns `sipAddress` and optional `minutesEarly`.
+- **Webex Connect:** Access to import and run the provided workflows in your organization.
+
 ## License
 
 All contents are licensed under the MIT license. Please see [license](LICENSE) for details.
