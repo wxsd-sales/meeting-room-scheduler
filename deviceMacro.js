@@ -1,7 +1,10 @@
+// Intercepts Instant Connect calendar Join (stub SIP dial), prompts for host code, POSTs to ic_booking_launch.
+// Set connectUrl (launch flow) and stubSipAddress to match Connect variable stubSipAddress and IC Join target.
+
 import xapi from 'xapi';
 
 const connectUrl = "";
-
+const stubSipAddress = "a@b.c"
 var serialNumber;
 xapi.Status.SystemUnit.Hardware.Module.SerialNumber.get().then(value => {
   console.log("Serial Number:", value);
@@ -17,42 +20,24 @@ xapi.Config.HttpClient.Mode.get().then(value => {
   }
 });
 
-
-// Add the Button to the touch panel
-xapi.command('UserInterface Extensions Panel Save', {
-    PanelId: 'meeting_join'
-    }, `<Extensions>
-      <Version>1.8</Version>
-      <Panel>
-        <Order>1</Order>
-        <Type>Statusbar</Type>
-        <Icon>Input</Icon>
-        <Color>#A866FF</Color>
-        <Name>Meeting Join</Name>
-        <ActivityType>Custom</ActivityType>
-      </Panel>
-    </Extensions>`);
-
-
-
-// Listen for the meeting_join panel and display initial prompt
-xapi.event.on('UserInterface Extensions Panel Clicked', (event) => {
-    if(event.PanelId == 'meeting_join'){
-      console.log('Meeting Join Selected')
-      // Creating the default panel
-      xapi.command('UserInterface Message TextInput Display', {
-        FeedbackId: 'enter_code',
+xapi.Status.Call.on((event) => {
+  console.log('Status.Call', event);
+  if(event.RemoteNumber && event.RemoteNumber == stubSipAddress){
+    console.log('match');
+    xapi.Command.Call.Disconnect({ CallId: event.id });
+    xapi.command('UserInterface Message TextInput Display', {
+        FeedbackId: 'enter_code_join',
         Text: 'Please enter your meeting code',
-        InputType: 'SingleLine',
+        InputType: 'Numeric',
         Placeholder: ' ',
         Duration: 0,
       }).catch((error) => { console.error(error); });
-    }
+  }
 });
 
 xapi.event.on('UserInterface Message TextInput Response', (event) => {
   switch(event.FeedbackId){
-    case 'enter_code':
+    case 'enter_code_join':
       requestDial(event.Text);
   }
 });
@@ -81,3 +66,4 @@ function requestDial(code){
            Title: 'Error'});
   });
 }
+
